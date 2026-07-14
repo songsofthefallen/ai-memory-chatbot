@@ -1,7 +1,7 @@
 from models import User, Conversation
 from security.jwt import verify_token
 from fastapi import HTTPException
-
+from sqlalchemy.orm import joinedload
 
 
 def find_user(user, db):
@@ -24,4 +24,11 @@ def get_current_user(token, db):
     user = find_user(username, db)
 
     return user
+
+def find_convo_in_user(user, convo, db):
+    return db.query(Conversation).filter(Conversation.user_id == user.id, Conversation.id == convo).first()
+
+def all_convo_in_user(user, db):
+    return db.query(Conversation).filter(Conversation.user_id == user.id).all()
+
 

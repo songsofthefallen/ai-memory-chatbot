@@ -14,7 +14,6 @@ class CreateConversation(BaseModel):
     title: str
 
 class SendMessage(BaseModel):
-    role: str
     content: str
 
 class ConversationResponse(BaseModel): #with message
