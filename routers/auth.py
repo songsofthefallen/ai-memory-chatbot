@@ -1,12 +1,13 @@
 import bcrypt
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from schemas import RegisterUser, LoginUser
+from schemas import RegisterUser
 from database import get_db
-from models import User
+from models import User, RefreshToken
 from logger import logger
-from services.all_services import find_user_name
-from security.jwt import get_token
+from services.all_services import find_user_name, find_refresh_token, find_user_by_token
+from security.jwt import get_access_token, get_refresh_token, verify_refresh_token
+from datetime import datetime, timedelta, UTC
 
 
 router = APIRouter()
@@ -43,6 +44,49 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(ge
     ):
         raise HTTPException(status_code=401, detail="Incorrect Password")
 
-    token = get_token(stored_user)
+    access_token = get_access_token(stored_user)
 
-    return token
+    refresh_token, expire = get_refresh_token(stored_user)
+
+    db_rt = RefreshToken(token = refresh_token, user_id = stored_user.id, expires_at = expire)
+
+    db.add(db_rt)
+    db.commit()
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
+
+@router.post('/refresh')
+def refresh_token(token: str, db = Depends(get_db)):
+    exist_token, row = find_refresh_token(token, db)
+
+    if not exist_token:
+        raise HTTPException(status_code=404, details='Token Not Found')
+    
+    verified_token = verify_refresh_token(exist_token)
+
+    if verified_token is None:
+        raise HTTPException(status_code=404, detail='Token Not Found')
+
+    user = find_user_by_token(verified_token, db)
+
+    if user is None:
+        raise HTTPException(status_code=404, detail='User Not Found')
+
+    new_access_token = get_access_token(user)
+
+    new_refresh_token, _ = get_refresh_token(user)
+
+    row.token = new_refresh_token
+
+    db.commit()
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
+    }
+    

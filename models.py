@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from database import Base, engine
 
@@ -10,6 +10,7 @@ class User(Base):
     password = Column(String(100), nullable=False)
 
     conversations = relationship('Conversation', back_populates='user', cascade='all, delete-orphan')
+    tokens = relationship('RefreshToken', back_populates='user', cascade='all, delete-orphan')
 
 class Conversation(Base):
     __tablename__ = 'conversations'
@@ -28,6 +29,16 @@ class Message(Base):
     content = Column(String(100))
 
     conversation = relationship('Conversation', back_populates='messages')
+
+class RefreshToken(Base):
+    __tablename__ = 'refresh_tokens'
+    id = Column(Integer, primary_key=True)
+    token = Column(String(255), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    expires_at = Column(DateTime)
+    revoked = Column(Boolean, default=False)
+
+    user = relationship('User', back_populates='tokens')
 
 Base.metadata.create_all(engine)
 
