@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from database import get_db
-from schemas import CreateConversation, SendMessage, ConversationResponse, ConversationsResponse, MessagesResponse
-from models import  Conversation, Message, User
+from schemas import CreateConversation, SendMessage, ConversationResponse, ConversationsResponse, MessagesResponse, EditMessage, UpdateConversation
+from models import  Conversation, Message
 from logger import logger
-from services.all_services import  get_current_user, find_convo_in_user, all_convo_in_user
+from services.all_services import  get_current_user, find_convo_in_user, all_convo_in_user, get_all_messages, find_message, return_all_messages
 from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") #login endpoint
@@ -14,8 +14,6 @@ router = APIRouter()
 def create_conversation(convo: CreateConversation, token: str = Depends(oauth2_scheme) ,db = Depends(get_db)):
     current_user = get_current_user(token, db)
 
-    if current_user is None:
-        raise HTTPException(status_code=404, detail="User not Found")
     
 
     db_convo = Conversation(title = convo.title, user_id = current_user.id)
@@ -29,16 +27,29 @@ def create_conversation(convo: CreateConversation, token: str = Depends(oauth2_s
         "Message": "Conversation Created Successfully"
     }
 
+@router.put('/conversations/{convo_id}')
+def rename_conversation(convo_id: int, new_title: UpdateConversation, token: str = Depends(oauth2_scheme), db = Depends(get_db)):
+    current_user = get_current_user(token, db)
 
+    
+    convo_in_user = find_convo_in_user(current_user, convo_id, db)
 
+    if convo_in_user is None:
+        raise HTTPException(status_code=404, detail="User Doesnt have this Conversation")
+    
+    convo_in_user.title = new_title
+
+    db.commit()
+
+    return {
+        "Message": "Title Sent Successfully"
+    }
 
 
 @router.post('/conversations/{convo_id}/messages')
 def send_message(convo_id: int, message: SendMessage, token: str = Depends(oauth2_scheme), db = Depends(get_db)):
     current_user = get_current_user(token, db)
 
-    if current_user is None:
-        raise HTTPException(status_code=404, detail="User not Found")
     
     convo_in_user = find_convo_in_user(current_user, convo_id, db)
 
@@ -56,24 +67,56 @@ def send_message(convo_id: int, message: SendMessage, token: str = Depends(oauth
         "Message": "Message Sent Successfully"
     }
 
-
-
-
-
-
-
-
-
-#work from here add current_user to each paths
-
-@router.get('/conversation/{convo_id}', response_model=ConversationResponse)
-def get_conversation_history(convo_id: int, token: str = Depends(oauth2_scheme),db = Depends(get_db)):
+@router.put('/conversations/{convo_id}/messages/{mess_id}')
+def edit_message(convo_id: int, mess_id: int, new_message: EditMessage, token: str = Depends(oauth2_scheme),db = Depends(get_db)):
     current_user = get_current_user(token, db)
 
-    if current_user is None:
-        raise HTTPException(status_code=404, detail="User not Found")
 
-    conversation = find_convo_in_user(current_user, convo_id, db)
+    
+    convo_in_user = find_convo_in_user(current_user, convo_id, db)
+
+    if convo_in_user is None:
+        raise HTTPException(status_code=404, detail="User Doesnt have this Conversation")
+    
+    message = find_message(mess_id, db)
+
+    if message is None:
+        raise HTTPException(status_code=404, detail='Message Not Found!')
+    
+    message.content = new_message.content
+
+    db.commit()
+
+    return {
+        "Message": "Message Updated Successfully"
+    }
+    
+    
+    
+
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+@router.get('/conversation/{convo_id}', response_model=ConversationResponse)
+def get_conversation_history(convo_id: int, page: int = 1, token: str = Depends(oauth2_scheme),db = Depends(get_db)):
+    current_user = get_current_user(token, db)
+
+
+
+    conversation = return_all_messages(current_user, convo_id, page, db)
 
     if conversation is None:
         logger.error("Conversation Not Found")
@@ -93,16 +136,16 @@ def get_conversation_history(convo_id: int, token: str = Depends(oauth2_scheme),
 
 
 @router.get('/conversations', response_model=list[ConversationsResponse])
-def list_user_conversations( token: str = Depends(oauth2_scheme), db = Depends(get_db)):
+def list_user_conversations(page: int = 1, token: str = Depends(oauth2_scheme), db = Depends(get_db)):
     current_user = get_current_user(token, db)
 
-    if current_user is None:
-        raise HTTPException(status_code=404, detail="User not Found")
+
     
-    conversations = all_convo_in_user(current_user, db)
+    conversations = all_convo_in_user(current_user, page, db)
 
     if conversations is None:
         raise HTTPException(status_code=404, detail="User Doesnt have this Conversation")
+    
     
     return conversations
 
@@ -117,8 +160,7 @@ def list_user_conversations( token: str = Depends(oauth2_scheme), db = Depends(g
 def delete_conversation(convo_id: int, token: str = Depends(oauth2_scheme),db = Depends(get_db)):
     current_user = get_current_user(token, db)
 
-    if current_user is None:
-        raise HTTPException(status_code=404, detail="User not Found")
+
 
     conversation = find_convo_in_user(current_user, convo_id, db)
 
@@ -137,13 +179,11 @@ def delete_conversation(convo_id: int, token: str = Depends(oauth2_scheme),db = 
 
 
 @router.get('/messages', response_model=list[MessagesResponse])
-def search_message(search: str, token: str = Depends(oauth2_scheme), db = Depends(get_db)):
+def search_messages(search: str, page: int = 1, token: str = Depends(oauth2_scheme), db = Depends(get_db)):
     current_user = get_current_user(token, db)
 
-    if current_user is None:
-        raise HTTPException(status_code=404, detail="User not Found")
 
-    messages = db.query(Message).filter(Message.content.contains(search)).all()
+    messages = get_all_messages(current_user, search, page, db)
 
     if not messages:
         logger.error("No Messages Found")

@@ -13,7 +13,13 @@ class LoginUser(BaseModel):
 class CreateConversation(BaseModel):
     title: str
 
+class UpdateConversation(BaseModel):
+    title: str
+
 class SendMessage(BaseModel):
+    content: str
+
+class EditMessage(BaseModel):
     content: str
 
 class ConversationResponse(BaseModel): #with message

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, func, desc
 from sqlalchemy.orm import relationship
 from database import Base, engine
 
@@ -17,9 +17,10 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String(100), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
+    create_at = Column(DateTime, server_default=func.now())
 
     user = relationship('User', back_populates='conversations')
-    messages = relationship('Message', back_populates='conversation', cascade='all, delete-orphan')
+    messages = relationship('Message', back_populates='conversation', cascade='all, delete-orphan', order_by=lambda: desc(Message.latest_activity)) #used in response model to order the list of messages
 
 class Message(Base):
     __tablename__ = 'messages'
@@ -27,6 +28,8 @@ class Message(Base):
     conversation_id = Column(Integer, ForeignKey('conversations.id'))
     role = Column(String(100), nullable=False)
     content = Column(String(100))
+    create_at = Column(DateTime, server_default=func.now())
+    latest_activity = Column(DateTime,default=func.now(),onupdate=func.now()) #set it as time created or updated
 
     conversation = relationship('Conversation', back_populates='messages')
 
