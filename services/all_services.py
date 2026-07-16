@@ -33,6 +33,8 @@ def all_convo_in_user(user, db):
 
 def find_refresh_token(token, db):
     find_token =  db.query(RefreshToken).filter(RefreshToken.token == token).first()
+    if find_token is None:
+        raise HTTPException(status_code=401, detail="Token Not Found")
     if find_token.revoked != False:
         raise HTTPException(status_code=401, detail="Token is Revoked")
     return find_token.token, find_token
