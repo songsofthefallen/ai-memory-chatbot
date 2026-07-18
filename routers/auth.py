@@ -5,8 +5,10 @@ from schemas import RegisterUser
 from database import get_db
 from models import User, RefreshToken
 from logger import logger
-from services.all_services import find_user_name, find_refresh_token, find_user_by_token
+from services.auth_service import find_refresh_token, find_user_by_token, find_user_name, username_already_exist, email_already_exist
 from security.jwt import get_access_token, get_refresh_token, verify_refresh_token
+from security.hash import hash_password, decode_hash
+
 
 
 
@@ -16,33 +18,31 @@ router = APIRouter()
 @router.post('/register')
 def register_user(user: RegisterUser, db = Depends(get_db)):
 
-    hashed_pass = bcrypt.hashpw(
-        user.password.encode("utf-8"),
-        bcrypt.gensalt()
-    ).decode("utf-8")
+    username = username_already_exist(user.username, db)
 
-    db_user = User(username = user.username, email = user.email, password = hashed_pass)
+    email = email_already_exist(user.email, db)
+    print(email)
+    print(username)
+
+    hashed_pass = hash_password(user.password)
+
+    db_user = User(username = username, email = email, hashed_password = hashed_pass)
 
     db.add(db_user)
     db.commit()
 
     logger.info("User Registered Successfully")
 
-    raise HTTPException(status_code=200, detail="User Registered Successfully")
+    return {
+       "Message": "User Registered Successfully"
+   }
 
 @router.post('/login') 
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)): #oauth expect from data not json so no pydantic model
 
     stored_user = find_user_name(form_data.username, db)
-
-    if not stored_user:
-        raise HTTPException(status_code=404, detail="User Not Found")
     
-    if not bcrypt.checkpw(
-        form_data.password.encode("utf-8"),
-        stored_user.password.encode("utf-8")
-    ):
-        raise HTTPException(status_code=401, detail="Incorrect Password")
+    decode_hash(form_data.password, stored_user.hashed_password)
 
     access_token = get_access_token(stored_user)
 
@@ -72,9 +72,6 @@ def refresh_token(token: str, db = Depends(get_db)):
         raise HTTPException(status_code=404, detail='Token Not Found')
 
     user = find_user_by_token(verified_token, db)
-
-    if user is None:
-        raise HTTPException(status_code=404, detail='User Not Found')
 
     new_access_token = get_access_token(user)
 
