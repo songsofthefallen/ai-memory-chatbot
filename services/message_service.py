@@ -12,9 +12,6 @@ def return_all_messages(user, convo, page, db):
     offset = (page - 1) * convo_per_page
     message = db.query(Message).filter(Message.conversation_id == conversation.id).order_by(Message.latest_activity.desc()).offset(offset).limit(convo_per_page).all()
 
-    if not message:
-        raise HTTPException(status_code=404, detail="User Doesnt have this Conversation")
-
     conversation.messages = message
 
     return conversation
@@ -28,8 +25,8 @@ def search_all_messages(user, search, page, db):
     return messages
 
 
-def find_message(id, db):
-    message = db.query(Message).filter(Message.id == id).first()
+def find_message(id, convo_id, db):
+    message = db.query(Message).filter(Message.conversation_id== convo_id, Message.id == id).first()
     if message is None:
         raise HTTPException(status_code=404, detail='Message Not Found!')
     return message

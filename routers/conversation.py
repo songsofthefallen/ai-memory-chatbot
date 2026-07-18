@@ -67,7 +67,7 @@ def edit_message(convo_id: int, mess_id: int, new_message: EditMessage, current_
     
     conversation = find_convo_in_user(current_user, convo_id, db)
 
-    message = find_message(mess_id, db)
+    message = find_message(mess_id, conversation.id, db)
     
     message.content = new_message.content
     conversation.latest_activity = datetime.now(UTC)

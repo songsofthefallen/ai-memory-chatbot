@@ -18,15 +18,13 @@ router = APIRouter()
 @router.post('/register')
 def register_user(user: RegisterUser, db = Depends(get_db)):
 
-    username = username_already_exist(user.username, db)
+    username_already_exist(user.username, db)
 
-    email = email_already_exist(user.email, db)
-    print(email)
-    print(username)
-
+    email_already_exist(user.email, db)
+    
     hashed_pass = hash_password(user.password)
 
-    db_user = User(username = username, email = email, hashed_password = hashed_pass)
+    db_user = User(username = user.username, email = user.email, hashed_password = hashed_pass)
 
     db.add(db_user)
     db.commit()

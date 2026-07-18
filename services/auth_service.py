@@ -10,13 +10,13 @@ def username_already_exist(name, db):
     user = db.query(User).filter(User.username == name).first()
     if user:
         raise HTTPException(status_code=409, detail='Username already Exist')
-    return name
+
 
 def email_already_exist(email, db):
     user = db.query(User).filter(User.email == email).first()
     if user:
         raise HTTPException(status_code=409, detail='Email already Exist')
-    return email
+  
 
 
 
