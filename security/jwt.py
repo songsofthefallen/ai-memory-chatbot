@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, UTC
 from jose import jwt, JWTError, ExpiredSignatureError
 from dotenv import load_dotenv
 from fastapi import HTTPException
+import secrets
+import hashlib
 
 load_dotenv()
 
@@ -35,9 +37,12 @@ def get_refresh_token(user):
 
     expire = datetime.now(UTC) + timedelta(days=30)
 
+    jti = secrets.token_hex(16)
+
     payload = {
         "sub": str(user.id),
         "type": "refresh", 
+        "jti": jti,
         "exp": expire
     }
 
@@ -47,9 +52,9 @@ def get_refresh_token(user):
         algorithm=ALGORITHM
     )
 
+    hashed_token = hashlib.sha256(token.encode()).hexdigest()
 
-
-    return token, expire
+    return hashed_token, token, expire, jti
   
  
 
@@ -89,6 +94,9 @@ def verify_refresh_token(token):
             raise HTTPException(status_code=401, detail="Invalid token type")
 
         if payload.get("sub") is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        if payload.get("jti") is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         return payload

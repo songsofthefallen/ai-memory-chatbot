@@ -1,5 +1,4 @@
-import bcrypt
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from schemas import RegisterUser
 from database import get_db
@@ -7,7 +6,7 @@ from models import User, RefreshToken
 from logger import logger
 from services.auth_service import find_refresh_token, find_user_by_token, find_user_name, username_already_exist, email_already_exist
 from security.jwt import get_access_token, get_refresh_token, verify_refresh_token
-from security.hash import hash_password, decode_hash
+from security.hash import hash_password, decode_hash, decode_hash_token
 
 
 
@@ -36,7 +35,7 @@ def register_user(user: RegisterUser, db = Depends(get_db)):
    }
 
 @router.post('/login') 
-def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)): #oauth expect from data not json so no pydantic model
+def login_user(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)): #oauth expect from data not json so no pydantic model
 
     stored_user = find_user_name(form_data.username, db)
     
@@ -44,9 +43,27 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(ge
 
     access_token = get_access_token(stored_user)
 
-    refresh_token, expire = get_refresh_token(stored_user)
+    hashed_rt, refresh_token, expire, jti = get_refresh_token(stored_user) #hashed
 
-    db_rt = RefreshToken(token = refresh_token, user_id = stored_user.id, expires_at = expire)
+    db_rt = RefreshToken(token = hashed_rt, jti = jti, user_id = stored_user.id, expires_at = expire)
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite='lax',
+        max_age =  60 * 60 * 24 * 30
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite='lax',
+        max_age =  900
+    )
 
     db.add(db_rt)
     db.commit()
@@ -59,23 +76,23 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(ge
 
 @router.post('/refresh')
 def refresh_token(token: str, db = Depends(get_db)):
-    exist_token, row = find_refresh_token(token, db)
-
-    if not exist_token:
-        raise HTTPException(status_code=404, details='Token Not Found')
     
-    verified_token = verify_refresh_token(exist_token)
+    verified_token = verify_refresh_token(token) #verify the authenticity of token also get the jti
 
-    if verified_token is None:
-        raise HTTPException(status_code=404, detail='Token Not Found')
+    jti = verified_token["jti"]
+
+    hashed_token, row = find_refresh_token(jti, db) #find refresh token in database also get the row to know which token to change
+
+    decode_hash_token(token, hashed_token) #verify if the token passed and the hashed token in database is the same
 
     user = find_user_by_token(verified_token, db)
 
     new_access_token = get_access_token(user)
 
-    new_refresh_token, _ = get_refresh_token(user)
+    hashed_new_rf_token, new_refresh_token, _ , jti = get_refresh_token(user)
 
-    row.token = new_refresh_token
+    row.token = hashed_new_rf_token
+    row.jti = jti
 
     db.commit()
 

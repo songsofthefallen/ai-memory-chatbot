@@ -1,4 +1,4 @@
-from models import Conversation, Message
+from models import Conversation
 from fastapi import HTTPException
 
 def find_convo_in_user(user, convo, db):

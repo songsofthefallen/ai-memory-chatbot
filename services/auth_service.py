@@ -1,10 +1,11 @@
 from models import RefreshToken, User
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Request
 from security.jwt import verify_access_token
 from database import get_db
 from fastapi.security import OAuth2PasswordBearer
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") #login endpoint passed in get_current_user jwt dependency
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") #login endpoint passed in get_current_user jwt dependency access token is here
 
 def username_already_exist(name, db):
     user = db.query(User).filter(User.username == name).first()
@@ -29,12 +30,14 @@ def find_user_name(name, db):
         raise HTTPException(status_code=404, detail='User NOt Found')
     return user
 
-def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get_db)):
+def get_current_user(request: Request,  db = Depends(get_db)):
+    token = request.cookies.get("access_token")
+
+    if token is None:
+        raise HTTPException(401, "Not authenticated")
+
     payload = verify_access_token(token)
 
-    if payload is None:
-        raise HTTPException(status_code=400, detail="Invalid Token")
-    
     username = payload["sub"]
 
     user = find_user(username, db)
@@ -44,8 +47,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get_db)):
 
     return user
 
-def find_refresh_token(token, db):
-    find_token =  db.query(RefreshToken).filter(RefreshToken.token == token).first()
+def find_refresh_token(jti, db):
+    find_token =  db.query(RefreshToken).filter(RefreshToken.jti == jti).first()
     if find_token is None:
         raise HTTPException(status_code=401, detail="Token Not Found")
     if find_token.revoked != False:

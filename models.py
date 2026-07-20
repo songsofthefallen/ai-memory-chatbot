@@ -38,6 +38,7 @@ class RefreshToken(Base):
     __tablename__ = 'refresh_tokens'
     id = Column(Integer, primary_key=True)
     token = Column(String(255), unique=True, nullable=False)
+    jti = Column(String(64))
     user_id = Column(Integer, ForeignKey("users.id"))
     expires_at = Column(DateTime)
     revoked = Column(Boolean, default=False)

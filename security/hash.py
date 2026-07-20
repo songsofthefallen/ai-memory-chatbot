@@ -1,5 +1,6 @@
 import bcrypt
 from fastapi import HTTPException
+import hashlib
 
 def hash_password(password):
     hashed_pass = bcrypt.hashpw(
@@ -15,3 +16,12 @@ def decode_hash(form_password, user_password):
         user_password.encode("utf-8")
     ):
         raise HTTPException(status_code=401, detail="Incorrect Password")
+    
+
+
+def decode_hash_token(token, hashed_token):
+    hashing_token = hashlib.sha256(token.encode()).hexdigest()
+
+    if hashing_token != hashed_token:
+        raise HTTPException(status_code=401, detail="Invalid Token")
+    
