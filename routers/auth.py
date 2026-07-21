@@ -4,7 +4,7 @@ from schemas import RegisterUser
 from database import get_db
 from models import User, RefreshToken
 from logger import logger
-from services.auth_service import find_refresh_token, find_user_by_token, find_user_name, username_already_exist, email_already_exist
+from services.auth_service import find_refresh_token, find_user_by_token, find_user_name, username_already_exist, email_already_exist, get_current_user
 from security.jwt import get_access_token, get_refresh_token, verify_refresh_token
 from security.hash import hash_password, decode_hash, decode_hash_token
 
@@ -102,3 +102,17 @@ def refresh_token(token: str, db = Depends(get_db)):
         "token_type": "bearer"
     }
     
+@router.post('/logout')
+def logout(response: Response, _: User = Depends(get_current_user)): #get the current user im not using the variable
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+
+    return {
+        "Message": "Log out Success"
+    }
+
+
