@@ -1,45 +1,57 @@
 from redis_client import redis
-from services.message_service import return_all_messages
-from services.conversation_service import  all_convo_in_user
 import json
-from schemas import ConversationsResponse, ConversationResponse
 
-def all_messages_cache(user, convo_id, page, db):
+class CacheService:
 
-    key = f"user:{user.id}:conversation:{convo_id}:messages:page:{page}"
+    @staticmethod
+    def get_cache(key):
+        value = redis.get(key)
 
-    cache = redis.get(key)
+        if value:
+            return json.loads(value)
+        
+        return None
 
-    if cache:
-        return json.loads(cache) #if its json loads it before returning
+    @staticmethod
+    def set_cache(key, value, exp=800):
+        redis.set(key, json.dumps(value), ex=exp)
+        
+    @staticmethod
+    def invalidate_cache_conversation(user_id):
+        keys = redis.keys(f"user:{user_id}:conversations:page:*")
+
+        if keys:
+            redis.delete(*keys)
+
+    @staticmethod
+    def invalidate_cache_message(user_id, convo_id):
+        keys = redis.keys(f"user:{user_id}:conversation:{convo_id}:messages:page:*")
+
+        if keys:
+            redis.delete(*keys)
+
+    @staticmethod
+    def invalidate_cache_search(user_id):
+        keys = redis.keys(f"user:{user_id}:search:*")
+
+        if keys:
+            redis.delete(*keys)
+
     
-    conversation = return_all_messages(user, convo_id, page, db)
 
-    conversation_dict = ConversationResponse.model_validate(conversation).model_dump()
+        
 
-    redis.set(key, json.dumps(conversation_dict), ex=500) #if its nested data use json. dumps
-
-    return conversation_dict
-
-
-def all_convo_cache(user, page, db):
-    key = f"user:{user.id}:conversations:page:{page}"
-
-    cache = redis.get(key)
-
-    if cache:
-        return json.loads(cache) #if its json loads it before returning
+class CacheKeys:
+    @staticmethod
+    def all_conversation(user, page):
+        return f"user:{user.id}:conversations:page:{page}"
     
-    conversations = all_convo_in_user(user, page, db)
+    @staticmethod
+    def search_message(user, search, page):
+        return f"user:{user.id}:search:{search}:page:{page}"
+    
+    @staticmethod
+    def all_messages(user, convo_id, page):
+        return f"user:{user.id}:conversation:{convo_id}:messages:page:{page}"
 
-    conversation_dict = [ConversationsResponse.model_validate(convo).model_dump()for convo in conversations] #turn python object into something json can understand its a list of convo so loop 
 
-    redis.set(key, json.dumps(conversation_dict), ex=500) #if its nested data use json. dumps
-
-    return conversation_dict
-
-def invalidate_cache(pattern):
-    keys = redis.keys(pattern)
-
-    if keys:
-        redis.delete(*keys)

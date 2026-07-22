@@ -1,28 +1,18 @@
 from fastapi import APIRouter, Depends
 from database import get_db
 from schemas import CreateConversation, SendMessage, ConversationResponse, ConversationsResponse, MessagesResponse, EditMessage, UpdateConversation
-from models import  Conversation, Message, User
+from models import User
 from logger import logger
-from services.message_service import search_all_messages, find_message
-from services.conversation_service import find_convo_in_user
+from services.message_service import search_all_messages, send_message, edit_message, return_all_messages
+from services.conversation_service import create_conversation, delete_conversation, all_convo_in_user
 from services.auth_service import get_current_user
-from datetime import datetime, UTC
-from services.caching import all_messages_cache, all_convo_cache, invalidate_cache
-from redis_client import redis
-
-
-
 
 router = APIRouter()
 
 @router.post('/conversations')
 def create_conversation(convo: CreateConversation, current_user: User = Depends(get_current_user) ,db = Depends(get_db)):
-    db_convo = Conversation(title = convo.title, user_id = current_user.id, latest_activity = datetime.now(UTC))
-
-    db.add(db_convo)
-    db.commit()
-
-    invalidate_cache(f"user:{current_user.id}:conversations:page:*")
+    
+    create_conversation(convo, current_user, db)
 
     logger.info("Conversation Created Successfully")
 
@@ -33,13 +23,7 @@ def create_conversation(convo: CreateConversation, current_user: User = Depends(
 @router.put('/conversations/{convo_id}')
 def rename_conversation(convo_id: int, new_title: UpdateConversation, current_user: User = Depends(get_current_user), db = Depends(get_db)):
 
-    convo_in_user = find_convo_in_user(current_user, convo_id, db)
-    
-    convo_in_user.title = new_title.title
-
-    db.commit()
-
-    invalidate_cache(f"user:{current_user.id}:conversations:page:*")
+    rename_conversation(convo_id, new_title, current_user, db)
 
     logger.info("Conversation Renamed Successfully")
 
@@ -47,20 +31,22 @@ def rename_conversation(convo_id: int, new_title: UpdateConversation, current_us
         "Message": "Title Sent Successfully"
     }
 
+@router.delete('/conversations/{convo_id}')
+def delete_conversation(convo_id: int, current_user: User = Depends(get_current_user),db = Depends(get_db)):
+
+    delete_conversation(convo_id, current_user, db)
+
+    logger.info("Conversation Deleted Successful")
+    return {
+        "Message": "Conversation Deleted Successful"
+    }
+
+
 
 @router.post('/conversations/{convo_id}/messages')
-def send_message(convo_id: int, message: SendMessage,current_user: User = Depends(get_current_user), db = Depends(get_db)):
+def send_message(convo_id: int, message: SendMessage, current_user: User = Depends(get_current_user), db = Depends(get_db)):
 
-    conversation = find_convo_in_user(current_user, convo_id, db)
-
-    db_message = Message(conversation_id = convo_id, role = "user", content = message.content)
-
-    conversation.latest_activity = datetime.now(UTC)
-
-    db.add(db_message)
-    db.commit()
-
-    invalidate_cache(f"user:{current_user.id}:conversation:{convo_id}:messages:page:*")
+    send_message(convo_id, message, current_user, db)
 
     logger.info("Message Sent Successfully")
 
@@ -71,16 +57,7 @@ def send_message(convo_id: int, message: SendMessage,current_user: User = Depend
 @router.put('/conversations/{convo_id}/messages/{mess_id}')
 def edit_message(convo_id: int, mess_id: int, new_message: EditMessage, current_user: User = Depends(get_current_user),db = Depends(get_db)):
     
-    conversation = find_convo_in_user(current_user, convo_id, db)
-
-    message = find_message(mess_id, conversation.id, db)
-    
-    message.content = new_message.content
-    conversation.latest_activity = datetime.now(UTC)
-
-    db.commit()
-
-    invalidate_cache(f"user:{current_user.id}:conversation:{convo_id}:messages:page:*")
+    edit_message(convo_id, mess_id, new_message, current_user, db)
 
     logger.info("Message Edited Successfully")
 
@@ -88,44 +65,31 @@ def edit_message(convo_id: int, mess_id: int, new_message: EditMessage, current_
         "Message": "Message Updated Successfully"
     }
 
+@router.get('/messages', response_model=list[MessagesResponse])
+def search_messages(search: str, page: int = 1, current_user: User = Depends(get_current_user), db = Depends(get_db)):
+    messages = search_all_messages(current_user, search, page, db)
+
+    return messages
+
+
 @router.get('/conversation/{convo_id}', response_model=ConversationResponse)
 def get_conversation_history(convo_id: int, page: int = 1, current_user: User = Depends(get_current_user),db = Depends(get_db)):
 
-    conversation = all_messages_cache(current_user, convo_id, page, db)
+    conversation = return_all_messages(current_user, convo_id, page, db)
 
-    
     logger.info("Success")
     return conversation
 
 @router.get('/conversations', response_model=list[ConversationsResponse])
 def list_user_conversations(page: int = 1, current_user: User = Depends(get_current_user), db = Depends(get_db)):
 
-    conversations = all_convo_cache(current_user, page, db)
+    conversations = all_convo_in_user(current_user, page, db)
 
     return conversations
 
-@router.delete('/conversations/{convo_id}')
-def delete_conversation(convo_id: int, current_user: User = Depends(get_current_user),db = Depends(get_db)):
-
-    conversation = find_convo_in_user(current_user, convo_id, db)
-
-    db.delete(conversation)
-    db.commit()
-
-    invalidate_cache(f"user:{current_user.id}:conversations:page:*")
-
-    logger.info("Conversation Deleted Successful")
-    return {
-        "Message": "Conversation Deleted Successful"
-    }
 
 
 
-@router.get('/messages', response_model=list[MessagesResponse])
-def search_messages(search: str, page: int = 1, current_user: User = Depends(get_current_user), db = Depends(get_db)):
-    messages = search_all_messages(current_user, search, page, db)
-
-    return messages
 
     
 
