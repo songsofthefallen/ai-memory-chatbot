@@ -1,5 +1,6 @@
 from redis_client import redis
 import json
+from config import settings
 
 class CacheService:
 
@@ -13,8 +14,8 @@ class CacheService:
         return None
 
     @staticmethod
-    def set_cache(key, value, exp=800):
-        redis.set(key, json.dumps(value), ex=exp)
+    def set_cache(key, value, ):
+        redis.set(key, json.dumps(value), ex=settings.CACHE_TTL)
         
     @staticmethod
     def invalidate_cache_conversation(user_id):

@@ -1,6 +1,9 @@
 import bcrypt
 from fastapi import HTTPException
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 def hash_password(password):
     hashed_pass = bcrypt.hashpw(
@@ -15,6 +18,9 @@ def decode_hash(form_password, user_password):
         form_password.encode("utf-8"),
         user_password.encode("utf-8")
     ):
+        logger.warning(
+            "Incorrect Password"
+        )
         raise HTTPException(status_code=401, detail="Incorrect Password")
     
 

@@ -1,14 +1,14 @@
-import os
+from config import settings
 from datetime import datetime, timedelta, UTC
 from jose import jwt, JWTError, ExpiredSignatureError
-from dotenv import load_dotenv
 from fastapi import HTTPException
 import secrets
 import hashlib
+import logging
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-JWT_KEY = os.getenv('JWT_KEY')
+JWT_KEY = settings.JWT_KEY
 
 ALGORITHM = "HS256"
 
@@ -27,6 +27,11 @@ def get_access_token(user):
         JWT_KEY,
         algorithm=ALGORITHM
     )
+
+    logger.info(
+            "User %s Got Access Token",
+            user.username,
+        )
 
     return token
 
@@ -54,6 +59,11 @@ def get_refresh_token(user):
 
     hashed_token = hashlib.sha256(token.encode()).hexdigest()
 
+    logger.info(
+        "User %s Got Refresh Token",
+        user.username,
+    )
+
     return hashed_token, token, expire, jti
   
  
@@ -67,17 +77,29 @@ def verify_access_token(token):
         )
 
         if payload.get("type") != "access":
+            logger.warning(
+                "Invalid Token Type"
+            )
             raise HTTPException(status_code=401, detail="Invalid token type")
 
         if payload.get("sub") is None:
+            logger.warning(
+                "Invalid Token"
+            )
             raise HTTPException(status_code=401, detail="Invalid token")
 
         return payload
     
     except ExpiredSignatureError:
+        logger.exception(
+            "Token Expired"
+        )
         raise HTTPException(status_code=401, detail="Token expired")
 
     except JWTError:
+        logger.exception(
+            "Invalid Token"
+        )
         raise HTTPException(status_code=401, detail="Invalid token")
     
 
@@ -94,16 +116,28 @@ def verify_refresh_token(token):
             raise HTTPException(status_code=401, detail="Invalid token type")
 
         if payload.get("sub") is None:
+            logger.warning(
+                "Invalid Token"
+            )
             raise HTTPException(status_code=401, detail="Invalid token")
         
         if payload.get("jti") is None:
+            logger.warning(
+                "Invalid Token"
+            )
             raise HTTPException(status_code=401, detail="Invalid token")
         
         return payload
     
     except ExpiredSignatureError:
+        logger.exception(
+            "Token Expired"
+        )
         raise HTTPException(status_code=401, detail="Token expired")
 
     except JWTError:
+        logger.exception(
+            "Invalid Token"
+        )
         raise HTTPException(status_code=401, detail="Invalid token")
 
