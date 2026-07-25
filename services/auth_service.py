@@ -47,7 +47,7 @@ def get_current_user(request: Request,  db = Depends(get_db)):
 
     if token is None:
         logger.warning("Not Authenticated")
-        raise HTTPException(401, "Not authenticated")
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
     payload = verify_access_token(token)
 
@@ -58,7 +58,7 @@ def get_current_user(request: Request,  db = Depends(get_db)):
     if user is None:
         logger.warning(
                     "User %s Not Found",
-                    user.username
+                    username
                 )
         raise HTTPException(status_code=404, detail="User not Found")
 
@@ -79,8 +79,10 @@ def find_refresh_token(jti, db):
     
     return find_token.token, find_token
 
-def find_user_by_token(token, db):
-    user = db.query(User).filter(User.id == token["sub"]).first()
+def find_user_by_token(payload, db):
+    username = payload["sub"]
+
+    user = db.query(User).filter(User.id == username).first()
     if user is None:
         logger.warning(
             "User Not Found"

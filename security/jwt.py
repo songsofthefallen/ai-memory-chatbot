@@ -12,9 +12,11 @@ JWT_KEY = settings.JWT_KEY
 
 ALGORITHM = "HS256"
 
-def get_access_token(user):
+def get_access_token(user, expires_delta: timedelta | None = None):
+    if expires_delta is None:
+        expires_delta = timedelta(minutes=10)
 
-    expire = datetime.now(UTC) + timedelta(minutes=10)
+    expire = datetime.now(UTC) + expires_delta
 
     payload = {
         "sub": str(user.id),
@@ -38,9 +40,11 @@ def get_access_token(user):
 
     
 
-def get_refresh_token(user):
+def get_refresh_token(user, expires_delta: timedelta | None = None):
+    if expires_delta is None:
+        expires_delta = timedelta(minutes=10)
 
-    expire = datetime.now(UTC) + timedelta(days=30)
+    expire = datetime.now(UTC) + expires_delta
 
     jti = secrets.token_hex(16)
 
@@ -80,7 +84,7 @@ def verify_access_token(token):
             logger.warning(
                 "Invalid Token Type"
             )
-            raise HTTPException(status_code=401, detail="Invalid token type")
+            raise HTTPException(status_code=401, detail="Invalid Token Type")
 
         if payload.get("sub") is None:
             logger.warning(
@@ -109,11 +113,11 @@ def verify_refresh_token(token):
         payload = jwt.decode(
             token,
             JWT_KEY,
-            algorithms=ALGORITHM
+            algorithms=[ALGORITHM]
         )
 
         if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Invalid token type")
+            raise HTTPException(status_code=401, detail="Invalid Token Type")
 
         if payload.get("sub") is None:
             logger.warning(

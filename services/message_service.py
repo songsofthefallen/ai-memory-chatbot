@@ -1,12 +1,13 @@
 from models import Conversation, Message, User
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from services.conversation_service import ConversationService
+from services.conversation_service import ConversationService, cache_service
 from datetime import datetime, UTC
 from schemas import ConversationResponse, MessagesResponse, SendMessage, EditMessage
-from services.caching import CacheService, CacheKeys
+from services.caching import CacheKeys
 from config import settings
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,8 @@ class RouterServiceMessage:
             convo_id
         )
 
-        CacheService.invalidate_cache_message(current_user.id, convo_id)
-        CacheService.invalidate_cache_search(current_user.id)
+        cache_service.invalidate_cache_message(current_user.id, convo_id)
+        cache_service.invalidate_cache_search(current_user.id)
         
     @staticmethod
     def edit_message_service(convo_id: int, mess_id: int, new_message: EditMessage, current_user: User, db: Session):
@@ -50,14 +51,14 @@ class RouterServiceMessage:
             convo_id
         )
 
-        CacheService.invalidate_cache_message(current_user.id, convo_id)
-        CacheService.invalidate_cache_search(current_user.id)
+        cache_service.invalidate_cache_message(current_user.id, convo_id)
+        cache_service.invalidate_cache_search(current_user.id)
 
     @staticmethod
     def search_all_messages_service(user: User, search: str, page: int, db: Session):
         key = CacheKeys.search_message(user, search, page)
 
-        cache = CacheService.get_cache(key)
+        cache = cache_service.get_cache(key)
 
         if cache:
             logger.info(
@@ -80,7 +81,7 @@ class RouterServiceMessage:
         
         message_dict = [MessagesResponse.model_validate(mess).model_dump() for mess in messages]
 
-        CacheService.set_cache(key, message_dict)
+        cache_service.set_cache(key, message_dict)
 
         logger.info(
                 "User '%s' Searched: '%s' (page=%s)",
@@ -116,7 +117,7 @@ class MessageService:
 
         key = CacheKeys.all_messages(user, convo_id, page)
 
-        cache = CacheService.get_cache(key)
+        cache = cache_service.get_cache(key)
 
         if cache:
             logger.info(
@@ -143,7 +144,7 @@ class MessageService:
 
         conversation_dict = ConversationResponse.model_validate(conversation).model_dump()
 
-        CacheService.set_cache(key, conversation_dict)
+        cache_service.set_cache(key, conversation_dict)
 
         logger.info("User '%s' Retrieved history of Conversation '%s' (page=%s)", 
             user.username,

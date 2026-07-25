@@ -1,46 +1,40 @@
-from redis_client import redis
 import json
 from config import settings
 
 class CacheService:
+    def __init__(self, client):
+        self.redis = client
 
-    @staticmethod
-    def get_cache(key):
-        value = redis.get(key)
+    def get_cache(self, key):
+        value = self.redis.get(key)
 
         if value:
             return json.loads(value)
         
         return None
 
-    @staticmethod
-    def set_cache(key, value, ):
-        redis.set(key, json.dumps(value), ex=settings.CACHE_TTL)
+    def set_cache(self, key, value):
+        self.redis.set(key, json.dumps(value), ex=settings.CACHE_TTL)
         
-    @staticmethod
-    def invalidate_cache_conversation(user_id):
-        keys = redis.keys(f"user:{user_id}:conversations:page:*")
+    def invalidate_cache_conversation(self, user_id):
+        keys = self.redis.keys(f"user:{user_id}:conversations:page:*")
 
         if keys:
-            redis.delete(*keys)
+            self.redis.delete(*keys)
 
-    @staticmethod
-    def invalidate_cache_message(user_id, convo_id):
-        keys = redis.keys(f"user:{user_id}:conversation:{convo_id}:messages:page:*")
-
-        if keys:
-            redis.delete(*keys)
-
-    @staticmethod
-    def invalidate_cache_search(user_id):
-        keys = redis.keys(f"user:{user_id}:search:*")
+    def invalidate_cache_message(self, user_id, convo_id):
+        keys = self.redis.keys(f"user:{user_id}:conversation:{convo_id}:messages:page:*")
 
         if keys:
-            redis.delete(*keys)
+            self.redis.delete(*keys)
+
+    def invalidate_cache_search(self, user_id):
+        keys = self.redis.keys(f"user:{user_id}:search:*")
+
+        if keys:
+            self.redis.delete(*keys)
 
     
-
-        
 
 class CacheKeys:
     @staticmethod

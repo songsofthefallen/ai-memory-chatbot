@@ -6,8 +6,11 @@ from schemas import ConversationsResponse
 from datetime import datetime, UTC
 from config import settings
 import logging
+from redis_client import redis
 
 logger = logging.getLogger(__name__)
+
+cache_service = CacheService(redis)
 
 class RouterServiceConversation:
 
@@ -23,7 +26,7 @@ class RouterServiceConversation:
             current_user.username
         )
 
-        CacheService.invalidate_cache_conversation(current_user.id)
+        cache_service.invalidate_cache_conversation(current_user.id)
 
     @staticmethod
     def rename_conversation_service(convo_id: int, new_title: str, current_user: User, db: Session):
@@ -38,7 +41,7 @@ class RouterServiceConversation:
             current_user.username, convo_id
         )
 
-        CacheService.invalidate_cache_conversation(current_user.id)
+        cache_service.invalidate_cache_conversation(current_user.id)
 
     @staticmethod
     def delete_conversation_service(convo_id: int, current_user: User, db: Session):
@@ -53,7 +56,7 @@ class RouterServiceConversation:
             convo_id
         )
 
-        CacheService.invalidate_cache_conversation(current_user.id)
+        cache_service.invalidate_cache_conversation(current_user.id)
 
 class ConversationService:
 
@@ -80,7 +83,7 @@ class ConversationService:
     def all_convo_in_user(user: User, page: int, db: Session):
         key = CacheKeys.all_conversation(user, page)
 
-        cache = CacheService.get_cache(key)
+        cache = cache_service.get_cache(key)
 
         if cache:
             logger.info(
@@ -100,7 +103,7 @@ class ConversationService:
     
         conversation_dict = [ConversationsResponse.model_validate(convo).model_dump()for convo in conversations] #turn python object into something json can understand its a list of convo so loop 
 
-        CacheService.set_cache(key, conversation_dict)
+        cache_service.set_cache(key, conversation_dict)
 
         logger.info("User '%s' Retrieved the List of Conversation (page=%s)",
             user.username,
