@@ -2,7 +2,7 @@ from models import Conversation, User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from services.caching import CacheService, CacheKeys
-from schemas import ConversationsResponse
+from schemas import ConversationsResponse, UpdateConversation
 from datetime import datetime, UTC
 from config import settings
 import logging
@@ -29,7 +29,7 @@ class RouterServiceConversation:
         cache_service.invalidate_cache_conversation(current_user.id)
 
     @staticmethod
-    def rename_conversation_service(convo_id: int, new_title: str, current_user: User, db: Session):
+    def rename_conversation_service(convo_id: int, new_title: UpdateConversation, current_user: User, db: Session):
         convo_in_user = ConversationService.find_convo_in_user(current_user, convo_id, db)
         
         convo_in_user.title = new_title.title

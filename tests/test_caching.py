@@ -8,26 +8,26 @@ from models import User
 
 
 def test_get_cache_hit(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.get.return_value = '{"name":"Cas"}' #whatever the key return this
 
-    result = fake_cache.get_cache("user:1")
+    result = f_cache.get_cache("user:1")
 
     assert result == {"name":"Cas"}
     fake_redis.get.assert_called_once_with("user:1") 
 
 
 def test_get_cache_miss(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.get.return_value = None
 
-    result = fake_cache.get_cache("user:1")
+    result = f_cache.get_cache("user:1")
 
     assert result is None 
 
 def test_set_cache(fake_cache):
-    fake_cache, fake_redis = fake_cache
-    fake_cache.set_cache(
+    f_cache, fake_redis = fake_cache
+    f_cache.set_cache(
         "user:1",
         {"name":"John"}
         )
@@ -39,13 +39,13 @@ def test_set_cache(fake_cache):
     )
 
 def test_invalidate_cache_conversation_key_existed(fake_cache): #keys existed scenario
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.keys.return_value = [ #whatever redis.key is return this
         "user:1:conversations:page:1",
         "user:1:conversations:page:2"
     ]
 
-    fake_cache.invalidate_cache_conversation(1) 
+    f_cache.invalidate_cache_conversation(1) 
 
     fake_redis.delete.assert_called_once_with( #compares it here and the one inside function
         "user:1:conversations:page:1",
@@ -53,21 +53,21 @@ def test_invalidate_cache_conversation_key_existed(fake_cache): #keys existed sc
     )
 
 def test_invalidate_cache_conversation_no_key_existed(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.keys.return_value = []
 
-    fake_cache.invalidate_cache_conversation(1) 
+    f_cache.invalidate_cache_conversation(1) 
 
     fake_redis.delete.assert_not_called()
 
 def test_invalidate_cache_message_key_existed(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.keys.return_value = [ 
         "user:1:conversations:conversation:1:messages:page:1",
         "user:1:conversations:conversation:1:messages:page:2"
     ]
 
-    fake_cache.invalidate_cache_message(1, 1) 
+    f_cache.invalidate_cache_message(1, 1) 
 
     fake_redis.delete.assert_called_once_with( 
         "user:1:conversations:conversation:1:messages:page:1",
@@ -75,21 +75,21 @@ def test_invalidate_cache_message_key_existed(fake_cache):
     )
 
 def test_invalidate_cache_message_not_key_existed(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.keys.return_value = []
 
-    fake_cache.invalidate_cache_message(1, 1) 
+    f_cache.invalidate_cache_message(1, 1) 
 
     fake_redis.delete.assert_not_called()
 
 def test_invalidate_cache_search_key_existed(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.keys.return_value = [ 
         "user:1:search:test1",
         "user:1:searh:test2"
     ]
 
-    fake_cache.invalidate_cache_search(1) 
+    f_cache.invalidate_cache_search(1) 
 
     fake_redis.delete.assert_called_once_with( 
         "user:1:search:test1",
@@ -97,10 +97,10 @@ def test_invalidate_cache_search_key_existed(fake_cache):
     )
 
 def test_invalidate_cache_search_not_key_existed(fake_cache):
-    fake_cache, fake_redis = fake_cache
+    f_cache, fake_redis = fake_cache
     fake_redis.keys.return_value = []
 
-    fake_cache.invalidate_cache_search(1) 
+    f_cache.invalidate_cache_search(1) 
 
     fake_redis.delete.assert_not_called()
 
