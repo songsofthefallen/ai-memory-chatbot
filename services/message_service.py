@@ -20,9 +20,13 @@ class RouterServiceMessage:
         db_message = Message(conversation_id = convo_id, role = "user", content = message.content)
 
         conversation.latest_activity = datetime.now(UTC)
-
+        
         db.add(db_message)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
         logger.info(
             "User '%s' Added a Message into Conversation '%s'",
@@ -42,7 +46,11 @@ class RouterServiceMessage:
         message.content = new_message.content
         conversation.latest_activity = datetime.now(UTC)
 
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
         logger.info(
             "User '%s' Edited Message'%s' in Conversation '%s'",
@@ -76,8 +84,6 @@ class RouterServiceMessage:
         convo_per_page = settings.CONVERSATION_PER_PAGE
         offset = (page - 1) * convo_per_page
         messages = db.query(Message).join(Message.conversation).filter(Message.content.contains(search), Conversation.user_id == user.id).order_by(Message.create_at.desc()).offset(offset).limit(convo_per_page).all()
-        if not messages:
-            raise HTTPException(status_code=404, detail='No Message Found')
         
         message_dict = [MessagesResponse.model_validate(mess).model_dump() for mess in messages]
 
@@ -104,7 +110,7 @@ class MessageService:
                 mess_id,
                 convo_id
             )
-            raise HTTPException(status_code=404, detail='Message Not Found!')
+            raise HTTPException(status_code=404, detail='Message Not Found')
         logger.info(
             "Message %s Found in Conversation %s",
             mess_id,
@@ -132,9 +138,6 @@ class MessageService:
         )
         
         conversation =  db.query(Conversation).filter(Conversation.user_id == user.id, Conversation.id == convo_id).first()
-
-        if conversation is None:
-            raise HTTPException(status_code=404, detail="User Doesnt have this Conversation")
         
         convo_per_page = settings.CONVERSATION_PER_PAGE
         offset = (page - 1) * convo_per_page

@@ -132,9 +132,8 @@ def test_all_convo_in_user_cache_miss(fake_database):
         mock_cache.get_cache.assert_called_once_with(None)
         fake_db.query.return_value.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.assert_called_once_with()
   
-def test_all_convo_in_user_cache_hit(fake_database, fake_cache):
+def test_all_convo_in_user_cache_hit(fake_database):
     fake_db, fake_user = fake_database
-    f_cache, fake_redis = fake_cache
 
     with patch("services.conversation_service.CacheKeys.all_conversation")as key, \
             patch("services.conversation_service.cache_service")as mock_cache:
