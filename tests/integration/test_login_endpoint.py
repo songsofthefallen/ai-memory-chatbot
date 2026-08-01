@@ -18,6 +18,7 @@ def test_login_success():
     assert "access_token" in body
     assert body["token_type"] == "bearer"
 
+
 def test_login_cannot_find_user():
 
     response = client.post(

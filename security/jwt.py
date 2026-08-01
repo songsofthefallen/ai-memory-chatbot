@@ -42,7 +42,7 @@ def get_access_token(user, expires_delta: timedelta | None = None):
 
 def get_refresh_token(user, expires_delta: timedelta | None = None):
     if expires_delta is None:
-        expires_delta = timedelta(minutes=10)
+        expires_delta = timedelta(days=30)
 
     expire = datetime.now(UTC) + expires_delta
 
