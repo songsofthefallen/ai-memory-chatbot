@@ -9,7 +9,7 @@ def test_send_message_success(authenticated_client, test_db):
     mess = f"test_content_{uuid.uuid4().hex[:8]}"
 
     response = user.post(
-        "/conversations/1/messages",
+        "/conversations/5/messages",
         json={
             "content": mess
         }

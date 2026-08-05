@@ -1,6 +1,5 @@
 from tests.conftest import client
 
-
 def test_get_conversation_history_success(authenticated_client):
     user = authenticated_client
 

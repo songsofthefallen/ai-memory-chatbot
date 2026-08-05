@@ -63,7 +63,7 @@ def login_user(response: Response, form_data: OAuth2PasswordRequestForm = Depend
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
+        secure=True, #make this false for integration test to work
         samesite='lax',
         max_age =  900
     )

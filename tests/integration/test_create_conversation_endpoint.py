@@ -2,8 +2,6 @@ from tests.conftest import client
 from models import Conversation
 import uuid
 
-title = f"test_title_{uuid.uuid4().hex[:8]}"
-
 def test_create_conversation_success(authenticated_client, test_db):
     user = authenticated_client 
     db = test_db

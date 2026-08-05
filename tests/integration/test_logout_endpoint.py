@@ -1,18 +1,12 @@
 from tests.conftest import client
-from security.jwt import get_access_token
 from models import User
 
 fake_user = User(id=1, username="fake_user")
 
-def test_logout_success():
-    access_token = get_access_token(fake_user)
+def test_logout_success(authenticated_client):
+    user = authenticated_client
 
-    client.cookies.set( #settings it to delete it later
-        "access_token",
-        access_token
-    )
-
-    response = client.post("/logout")
+    response = user.post("/logout")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -26,7 +20,6 @@ def test_logout_success():
     assert "expires=" in cookie
 
 def test_logout_fail():
-    client.cookies.clear() #TestClient persists cookies across requests so deleting it for this to work
 
     response = client.post("/logout")
 

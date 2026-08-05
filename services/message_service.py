@@ -138,6 +138,9 @@ class MessageService:
         )
         
         conversation =  db.query(Conversation).filter(Conversation.user_id == user.id, Conversation.id == convo_id).first()
+
+        if not conversation:
+            raise HTTPException(status_code=404, detail="User Doesnt have this Conversation")
         
         convo_per_page = settings.CONVERSATION_PER_PAGE
         offset = (page - 1) * convo_per_page

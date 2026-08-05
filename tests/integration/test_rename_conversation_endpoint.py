@@ -1,14 +1,17 @@
 from tests.conftest import client
 from models import Conversation
+import uuid
 
 def test_rename_conversation_success(authenticated_client, test_db):
     user = authenticated_client
     db = test_db
 
+    new_title = f"test_title_{uuid.uuid4().hex[:8]}"
+
     response = user.put(
         "/conversations/1",
         json={
-            "title": "fake_new_title"
+            "title": new_title
         }
     )
 
@@ -20,7 +23,7 @@ def test_rename_conversation_success(authenticated_client, test_db):
 
     convo = db.query(Conversation).filter(Conversation.id == 1).first()
 
-    assert convo.title == "fake_new_title"
+    assert convo.title == new_title
 
 def test_rename_conversation_not_authenticated():
 
@@ -59,7 +62,7 @@ def test_rename_conversation_conversation_invalid_request_body(authenticated_cli
     user = authenticated_client
 
     response = user.put(
-        "/conversations/999",
+        "/conversations/1",
         json={}
     )
 

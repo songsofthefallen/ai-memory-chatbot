@@ -1,9 +1,8 @@
-from tests.conftest import client, TestSessionLocal
-from models import Message, Conversation
+from tests.conftest import client
+from models import Conversation
 
-def test_search_messages_success(authenticated_client, test_db):
+def test_search_messages_success(authenticated_client):
     user = authenticated_client
-    db = test_db
 
     response = user.get(
         "/messages",

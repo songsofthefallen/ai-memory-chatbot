@@ -2,7 +2,7 @@ from models import Conversation, User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from services.caching import CacheService, CacheKeys
-from schemas import ConversationsResponse, UpdateConversation
+from schemas import ConversationsResponse, UpdateConversation, CreateConversation
 from datetime import datetime, UTC
 from config import settings
 import logging
@@ -15,7 +15,7 @@ cache_service = CacheService(redis)
 class RouterServiceConversation:
 
     @staticmethod
-    def create_conversation_service(convo: Conversation, current_user: User, db: Session):
+    def create_conversation_service(convo: CreateConversation, current_user: User, db: Session):
         db_convo = Conversation(title = convo.title, user_id = current_user.id, latest_activity = datetime.now(UTC))
 
         db.add(db_convo)

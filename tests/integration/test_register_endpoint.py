@@ -140,9 +140,3 @@ def test_register_invalid_email():
     assert error[0]["type"] == "value_error"
     assert error[0]["loc"] == ["body", "email"]
 
-
-
-
-
-
-

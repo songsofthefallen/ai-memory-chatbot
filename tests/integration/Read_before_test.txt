@@ -1,0 +1,24 @@
+in setting cookie in log in we have:
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite='lax',
+        max_age =  900
+    )
+
+you need to turn the secure to secure=False for the integration endpoints to work
+
+these should be the value before testing
+
+      response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite='lax',
+        max_age =  900
+    )
+
